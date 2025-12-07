@@ -57,8 +57,6 @@ s2st-project/
     ```bash
     python -m ui.server
     ```
-    - `--source`: Source language code (e.g., `en` for English, `es` for Spanish).
-    - `--target`: Target language code (e.g., `es` for Spanish, `fr` for French, `de` for German).
 
     **Example:** Translate English to French
     ```bash
