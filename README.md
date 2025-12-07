@@ -55,7 +55,7 @@ s2st-project/
 
 2.  **Run the application:**
     ```bash
-    python main.py --source en --target es
+    python -m ui.server
     ```
     - `--source`: Source language code (e.g., `en` for English, `es` for Spanish).
     - `--target`: Target language code (e.g., `es` for Spanish, `fr` for French, `de` for German).
