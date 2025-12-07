@@ -58,11 +58,6 @@ s2st-project/
     python -m ui.server
     ```
 
-    **Example:** Translate English to French
-    ```bash
-    python main.py --source en --target fr
-    ```
-
 3.  **Interact:**
     - Speak into your microphone.
     - The system will print the transcription and translation to the console.
