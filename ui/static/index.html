@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S2ST Control Panel</title>
+  <style>
+    :root { font-family: "Inter", system-ui, -apple-system, sans-serif; color: #e7ecf7; }
+    body {
+      margin: 0; padding: 0; height: 100vh;
+      background: radial-gradient(circle at 20% 20%, #16213e 0, #0b132b 40%, #0a0f1f 70%);
+      display: flex; flex-direction: column;
+    }
+    header {
+      padding: 14px 20px; background: rgba(12,18,36,0.8);
+      border-bottom: 1px solid #1f2a40; display:flex; align-items:center; gap:10px;
+      backdrop-filter: blur(8px);
+    }
+    .brand { font-weight: 700; letter-spacing: 0.2px; }
+    main { flex: 1; display: grid; grid-template-columns: 340px 1fr; gap: 12px; padding: 16px 16px 20px; box-sizing: border-box; }
+    .card {
+      background: linear-gradient(145deg, rgba(18,26,46,0.92), rgba(15,23,40,0.92));
+      border: 1px solid #1f2a40; border-radius: 14px; padding: 16px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+    }
+    h2 { margin: 0 0 14px; font-size: 16px; letter-spacing: 0.2px; color: #f4f7ff; }
+    label { display: block; margin: 8px 0 4px; font-size: 13px; color: #cdd8f0; }
+    select, button {
+      width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid #2c3a57;
+      background: #0f192d; color: #e6ecff; font-weight: 600;
+      transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+    }
+    select:focus, button:focus { outline: none; border-color: #4a7dff; box-shadow: 0 0 0 2px rgba(74,125,255,0.2); }
+    button { cursor: pointer; }
+    button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,0,0,0.25); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    #log {
+      background: #0c1222; border: 1px solid #1f2a40; border-radius: 12px; padding: 12px;
+      height: calc(100vh - 200px); overflow-y: auto; font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px; line-height: 1.35;
+    }
+    .pill { display: inline-flex; align-items: center; gap:6px; padding: 5px 12px; border-radius: 999px; font-size: 12px; background: #101a30; border: 1px solid #2c3a57; }
+    .status { margin-left: auto; }
+    .badge-on { color: #7ee0a3; }
+    .badge-off { color: #f2b8b5; }
+    .log-row { display:flex; gap:8px; align-items: baseline; padding: 4px 2px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .ts { color: #6f7ca4; font-size: 12px; min-width: 74px; }
+    .tag { padding: 2px 8px; border-radius: 999px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; background: #1a2540; color: #9fbbff; }
+    .tag.status { background: #1b2f24; color: #7ee0a3; }
+    .tag.you { background: #243254; color: #f1f5ff; }
+    .tag.trans { background: #35204e; color: #f4c3ff; }
+    .tag.tts { background: #243d35; color: #99f3c6; }
+    .tag.play { background: #2f2d1f; color: #f5e7a3; }
+    .tag.err { background: #3b1f24; color: #ffb6c1; }
+    .msg { color: #e7ecf7; }
+    .divider { height:1px; background: #1f2a40; margin: 14px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">S2ST Control Panel</div>
+    <div id="status" class="pill status badge-off">stopped</div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Controls</h2>
+      <label for="source">Source language</label>
+      <select id="source">
+        <option value="en">English</option>
+        <option value="es">Spanish</option>
+        <option value="fr">French</option>
+        <option value="de">German</option>
+      </select>
+
+      <label for="target">Target language</label>
+      <select id="target">
+        <option value="fr">French</option>
+        <option value="es">Spanish</option>
+        <option value="de">German</option>
+      </select>
+
+      <label for="device">Input device (optional)</label>
+      <input id="device" type="number" min="0" placeholder="auto (default input)" style="width:100%; padding:11px 12px; border-radius:10px; border:1px solid #2c3a57; background:#0f192d; color:#e6ecff; box-sizing:border-box;" />
+
+      <label for="rate">Mic sample rate (optional)</label>
+      <input id="rate" type="number" min="8000" step="1000" placeholder="auto (device default)" style="width:100%; padding:11px 12px; border-radius:10px; border:1px solid #2c3a57; background:#0f192d; color:#e6ecff; box-sizing:border-box;" />
+
+      <div class="row">
+        <button id="start">Start</button>
+        <button id="stop" disabled>Stop</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Conversation</h2>
+      <div id="log"></div>
+    </section>
+  </main>
+
+  <script>
+    const logEl = document.getElementById('log');
+    const statusEl = document.getElementById('status');
+    const startBtn = document.getElementById('start');
+    const stopBtn = document.getElementById('stop');
+    const srcSel = document.getElementById('source');
+    const tgtSel = document.getElementById('target');
+    const devInput = document.getElementById('device');
+    const rateInput = document.getElementById('rate');
+
+    function logLine(type, text) {
+      const row = document.createElement('div');
+      row.className = 'log-row';
+      const ts = document.createElement('span');
+      ts.className = 'ts';
+      ts.textContent = new Date().toLocaleTimeString();
+      const tag = document.createElement('span');
+      const msg = document.createElement('span');
+      msg.className = 'msg';
+      msg.textContent = text;
+
+      const typeMap = {
+        status: { cls: 'status', label: 'status' },
+        you: { cls: 'you', label: 'you' },
+        trans: { cls: 'trans', label: 'trans' },
+        tts: { cls: 'tts', label: 'tts' },
+        play: { cls: 'play', label: 'play' },
+        error: { cls: 'err', label: 'error' },
+        info: { cls: 'status', label: 'info' }
+      };
+      const meta = typeMap[type] || typeMap.info;
+      tag.className = `tag ${meta.cls}`;
+      tag.textContent = meta.label;
+
+      row.appendChild(ts);
+      row.appendChild(tag);
+      row.appendChild(msg);
+      logEl.appendChild(row);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function setStatus(text, on) {
+      statusEl.textContent = text;
+      statusEl.classList.toggle('badge-on', on);
+      statusEl.classList.toggle('badge-off', !on);
+      startBtn.disabled = on;
+      stopBtn.disabled = !on;
+    }
+
+    async function start() {
+      const body = { source: srcSel.value, target: tgtSel.value };
+      if (devInput.value !== '') body.device_index = Number(devInput.value);
+      if (rateInput.value !== '') body.mic_sample_rate = Number(rateInput.value);
+      const res = await fetch('/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.status === 'started' || data.status === 'already_running') {
+        setStatus('running', true);
+        logLine('status', `Started (${body.source} -> ${body.target})`);
+      } else {
+        logLine('error', `Start failed: ${JSON.stringify(data)}`);
+      }
+    }
+
+    async function stop() {
+      const res = await fetch('/stop', { method: 'POST' });
+      const data = await res.json();
+      if (data.status === 'stopped') {
+        setStatus('stopped', false);
+        logLine('status', 'Stopped');
+      }
+    }
+
+    startBtn.onclick = start;
+    stopBtn.onclick = stop;
+
+    function connectWS() {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      const ws = new WebSocket(`${proto}://${location.host}/ws`);
+      ws.onopen = () => logLine('status', 'WebSocket connected');
+      ws.onclose = () => {
+        logLine('status', 'WebSocket disconnected, retrying in 2s...');
+        setTimeout(connectWS, 2000);
+      };
+      ws.onmessage = (ev) => {
+        try {
+          const m = JSON.parse(ev.data);
+          if (m.type === 'status') {
+            if (m.msg === 'started') setStatus('running', true);
+            if (m.msg === 'stopped') setStatus('stopped', false);
+            logLine('status', m.msg);
+          } else if (m.type === 'stt_final') {
+            logLine('you', m.text);
+          } else if (m.type === 'mt_final') {
+            logLine('trans', m.text);
+          } else if (m.type === 'tts_ready') {
+            const dur = m.duration && m.duration.toFixed ? m.duration.toFixed(2) : '?';
+            logLine('tts', `ready (${dur}s)`);
+          } else if (m.type === 'playback_start') {
+            logLine('play', 'playback start');
+          } else if (m.type === 'playback_end') {
+            logLine('play', 'playback end');
+          } else if (m.type === 'error') {
+            logLine('error', `${m.stage || ''} ${m.detail || ''}`);
+          } else {
+            logLine('info', JSON.stringify(m));
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+    }
+
+    // Initialize
+    setStatus('stopped', false);
+    connectWS();
+  </script>
+</body>
+</html>
+
