@@ -73,3 +73,32 @@ def is_speech_active(audio_chunk: np.ndarray, threshold_rms: float = 500.0) -> b
         logger.debug(f"Audio chunk rejected by VAD gate (Energy: {energy:.2f} < {threshold_rms})")
         
     return is_active
+
+def remove_dc_offset(audio_chunk: np.ndarray) -> np.ndarray:
+    """
+    Removes DC bias/offset from audio signal by subtracting the mean amplitude.
+    Microphone hardware frequently introduces DC drift which biases RMS calculation
+    and introduces audible artifacts during chunk stitching.
+    """
+    if len(audio_chunk) == 0:
+        return audio_chunk
+        
+    chunk_float = audio_chunk.astype(np.float64)
+    dc_free = chunk_float - np.mean(chunk_float)
+    return np.clip(dc_free, -32768, 32767).astype(np.int16)
+
+def calculate_zero_crossing_rate(audio_chunk: np.ndarray) -> float:
+    """
+    Calculate the Zero-Crossing Rate (ZCR) of an audio frame.
+    Higher ZCR typically indicates unvoiced speech / fricatives or high-frequency noise,
+    useful alongside RMS energy for robust speech discrimination.
+    """
+    if len(audio_chunk) < 2:
+        return 0.0
+        
+    signs = np.sign(audio_chunk)
+    # Replace 0s with 1 to avoid false crossings
+    signs[signs == 0] = 1
+    crossings = np.sum(np.abs(np.diff(signs)) > 0)
+    return float(crossings) / float(len(audio_chunk) - 1)
+
